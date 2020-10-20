@@ -87,6 +87,10 @@ enum FilterFailureReason
   EmptyFrameID,
   /// Max enum value for iteration, keep it at the end of the enum
   FilterFailureReasonCount,
+  /// Dropping the message because we cannot find the transform for it
+  CannotTransform,
+  /// Dropping the message because the queue is full and we more room
+  DropOldest,
 };
 
 }  // namespace filter_failure_reasons
@@ -101,6 +105,10 @@ static std::string get_filter_failure_reason_string(
       return "OutTheBack";
     case filter_failure_reasons::EmptyFrameID:
       return "EmptyFrameID";
+    case filter_failure_reasons::DropOldest:
+      return "DropOldest";
+    case filter_failure_reasons::CannotTransform:
+      return "CannotTransform";
     default:
       return "Invalid Failure Reason";
   }
@@ -398,7 +406,7 @@ public:
           (mt::FrameId<M>::value(*front.event.getMessage())).c_str(),
           mt::TimeStamp<M>::value(*front.event.getMessage()).seconds());
 
-        messageDropped(front.event, filter_failure_reasons::Unknown);
+        messageDropped(front.event, filter_failure_reasons::DropOldest);
 
         messages_.pop_front();
         --message_count_;
@@ -562,7 +570,7 @@ private:
       TF2_ROS_MESSAGEFILTER_DEBUG(
         "Discarding message in frame %s at time %.3f, count now %d",
         frame_id.c_str(), stamp.seconds(), message_count_ - 1);
-      messageDropped(saved_event, filter_failure_reasons::Unknown);
+      messageDropped(saved_event, filter_failure_reasons::CannotTransform);
     }
   }
 
